@@ -15,7 +15,7 @@ public class MovieRecommenderTest {
     public void testDataInfo() throws IOException, TasteException {
         //download movies.txt.gz from 
         //    http://snap.stanford.edu/data/web-Movies.html
-        MovieRecommender recommender = new MovieRecommender("/path/to/movies.txt.gz");
+        MovieRecommender recommender = new MovieRecommender("/home/liver/Documents/repos/big-data-excercises/movies.txt.gz");
         assertEquals(7911684, recommender.getTotalReviews());
         assertEquals(253059, recommender.getTotalProducts());
         assertEquals(889176, recommender.getTotalUsers());
@@ -31,6 +31,7 @@ public class MovieRecommenderTest {
     @Test
     public void testSetup() throws IOException, TasteException {
         MovieRecommender recommender = new MovieRecommender("/home/liver/Documents/repos/big-data-excercises/movies.txt.gz");
+        List<String> recommendations = recommender.getRecommendationsForUser("A141HP4LYPWMSR");
     }
 
 }

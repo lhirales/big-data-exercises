@@ -1,8 +1,9 @@
 package nearsoft.academy.bigdata.recommendation;
 
+import com.google.common.collect.BiMap;
+import com.google.common.collect.HashBiMap;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.LineIterator;
-import org.apache.commons.math3.linear.SymmLQ;
 import org.apache.mahout.cf.taste.common.TasteException;
 import org.apache.mahout.cf.taste.impl.model.file.FileDataModel;
 import org.apache.mahout.cf.taste.impl.neighborhood.ThresholdUserNeighborhood;
@@ -10,15 +11,12 @@ import org.apache.mahout.cf.taste.impl.recommender.GenericUserBasedRecommender;
 import org.apache.mahout.cf.taste.impl.similarity.PearsonCorrelationSimilarity;
 import org.apache.mahout.cf.taste.model.DataModel;
 import org.apache.mahout.cf.taste.neighborhood.UserNeighborhood;
+import org.apache.mahout.cf.taste.recommender.RecommendedItem;
 import org.apache.mahout.cf.taste.recommender.UserBasedRecommender;
 import org.apache.mahout.cf.taste.similarity.UserSimilarity;
 
 import java.io.*;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-
-import com.opencsv.CSVWriter;
+import java.util.*;
 
 import static nearsoft.academy.bigdata.recommendation.Utilities.decompressGzipFile;
 
@@ -26,57 +24,53 @@ import static nearsoft.academy.bigdata.recommendation.Utilities.decompressGzipFi
  * Created by liver on 19/09/16.
  */
 public class MovieRecommender {
+    private HashMap<String, Integer> usersMap;
+    private HashBiMap<String, Integer> itemsMap;
+    private int reviews;
     private UserBasedRecommender recommender;
 
     public MovieRecommender(String path) throws IOException, TasteException {
-
-        setupDatabase(path);
-//        DataModel model = new FileDataModel(new File(path));
-//        UserSimilarity similarity = new PearsonCorrelationSimilarity(model);
-//        UserNeighborhood neighborhood = new ThresholdUserNeighborhood(0.1, similarity, model);
-//        this.recommender = new GenericUserBasedRecommender(model, neighborhood, similarity);
+        this.usersMap = new HashMap<String, Integer>();
+        this.itemsMap = HashBiMap.create();
+        this.reviews = 0;
+        setupRecommender(path);
 
     }
 
     public int getTotalReviews() {
-
-        int totalReviews = 0;
-        return totalReviews;
+        return this.reviews;
     }
 
     public int getTotalProducts() {
-
-        int totalProducts = 0;
-        return totalProducts;
+        return this.itemsMap.size();
     }
 
     public int getTotalUsers() {
-
-        int totalUsers = 0;
-        return totalUsers;
+        return this.usersMap.size();
     }
 
 
-    public List<String> getRecommendationsForUser(String user) {
-
-        List<String> userList= Arrays.asList(user);
-        return userList;
-
+    public List<String> getRecommendationsForUser(String user) throws TasteException{
+        List<String> recommendationsForUser = new ArrayList<String>();
+        List<RecommendedItem> recommendations = this.recommender.recommend(this.usersMap.get(user), 5);
+        BiMap<Integer, String> itemsMapInv = this.itemsMap.inverse();
+        for (RecommendedItem recommendation : recommendations) {
+            int recommendationID = (int) recommendation.getItemID();
+            recommendationsForUser.add(itemsMapInv.get(recommendationID));
+        }
+        return recommendationsForUser;
     }
 
 
-    public void setupDatabase(String path) throws IOException {
+    public void setupRecommender(String path) throws IOException, TasteException {
         String fileTextName = "movies.txt";
         File fileText = new File(fileTextName);
         if(!fileText.exists()) {
             decompressGzipFile(path, fileTextName);
         }
 
-        HashMap<String, Integer> usersMap = new HashMap<String, Integer>();
-        HashMap<String, Integer> itemsMap = new HashMap<String, Integer>();
         Integer usersCounter = 0;
         Integer itemsCounter = 0;
-        int reviews = 0;
 
         String outputFile = "movies.csv";
 
@@ -84,9 +78,9 @@ public class MovieRecommender {
             // Open the file
             LineIterator it = FileUtils.lineIterator(fileText, "UTF-8");
 
-            String[] entries = new String[3];
+            int[] entries = new int[2];
 
-            CSVWriter csvOutput = new CSVWriter(new FileWriter(outputFile));
+            FileWriter csvOutput = new FileWriter(outputFile);
 
             try{
                 //Read File Line By Line
@@ -97,27 +91,26 @@ public class MovieRecommender {
                         if (!itemsMap.containsKey(item)) {
                             itemsCounter++;
                             itemsMap.put(item, itemsCounter);
-                            entries[1] = Integer.toString(itemsCounter);
+                            entries[1] = itemsCounter;
                         }
                         else{
-                            entries[1] = Integer.toString(itemsMap.get(item));
+                            entries[1] = itemsMap.get(item);
                         }
                     } else if (line.contains("review/userId: ")) {
                         String user = line.substring(15);
                         if (!usersMap.containsKey(user)) {
                             usersCounter++;
                             usersMap.put(user, usersCounter);
-                            entries[0] = Integer.toString(usersCounter);
+                            entries[0] = usersCounter;
                         }
                         else{
-                            entries[0] = Integer.toString(usersMap.get(user));
+                            entries[0] = usersMap.get(user);
                         }
                     } else if (line.contains("review/score: ")) {
-                        String score = line.substring(14);
-                        entries[2] = score;
-                        csvOutput.writeNext(entries);
+                        float score = Float.parseFloat(line.substring(14));
+                        csvOutput.write(entries[0] + "," + entries[1] + "," + score + "\n");
                         reviews++;
-                        entries = new String[entries.length];
+                        entries = new int[entries.length];
                     }
                 }
             }
@@ -131,8 +124,14 @@ public class MovieRecommender {
             e.printStackTrace();
         }
 
-        System.out.println(reviews);
-        System.out.println(itemsMap.size());
-        System.out.println(usersMap.size());
+        try {
+            DataModel model = new FileDataModel(new File(outputFile));
+            UserSimilarity similarity = new PearsonCorrelationSimilarity(model);
+            UserNeighborhood neighborhood = new ThresholdUserNeighborhood(0.1, similarity, model);
+            this.recommender = new GenericUserBasedRecommender(model, neighborhood, similarity);
+        }
+        catch(TasteException e){
+            e.printStackTrace();
+        }
     }
 }
