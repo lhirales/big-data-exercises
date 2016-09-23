@@ -2,8 +2,6 @@ package nearsoft.academy.bigdata.recommendation;
 
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.LineIterator;
 import org.apache.mahout.cf.taste.common.TasteException;
 import org.apache.mahout.cf.taste.impl.model.file.FileDataModel;
 import org.apache.mahout.cf.taste.impl.neighborhood.ThresholdUserNeighborhood;
@@ -18,8 +16,6 @@ import org.apache.mahout.cf.taste.similarity.UserSimilarity;
 import java.io.*;
 import java.util.*;
 import java.util.zip.GZIPInputStream;
-
-import static nearsoft.academy.bigdata.recommendation.Utilities.decompressGzipFile;
 
 /**
  * Created by liver on 19/09/16.
@@ -94,19 +90,18 @@ public class MovieRecommender {
                         }
                     } else if (line.contains("review/userId: ")) {
                         String user = line.substring(15);
-                        if (!usersMap.containsKey(user)) {
+                        if (!this.usersMap.containsKey(user)) {
                             usersCounter++;
-                            usersMap.put(user, usersCounter);
+                            this.usersMap.put(user, usersCounter);
                             entries[0] = usersCounter;
                         }
                         else{
-                            entries[0] = usersMap.get(user);
+                            entries[0] = this.usersMap.get(user);
                         }
                     } else if (line.contains("review/score: ")) {
                         float score = Float.parseFloat(line.substring(14));
                         csvOutput.write(entries[0] + "," + entries[1] + "," + score + "\n");
-                        reviews++;
-                        entries = new int[entries.length];
+                        this.reviews++;
                     }
                 }
             }

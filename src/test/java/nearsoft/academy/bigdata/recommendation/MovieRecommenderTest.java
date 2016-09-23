@@ -28,10 +28,4 @@ public class MovieRecommenderTest {
 
     }
 
-    @Test
-    public void testSetup() throws IOException, TasteException {
-        MovieRecommender recommender = new MovieRecommender("/home/liver/Documents/repos/big-data-exercises/movies.txt.gz");
-        List<String> recommendations = recommender.getRecommendationsForUser("A141HP4LYPWMSR");
-    }
-
 }
