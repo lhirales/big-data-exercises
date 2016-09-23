@@ -17,6 +17,7 @@ import org.apache.mahout.cf.taste.similarity.UserSimilarity;
 
 import java.io.*;
 import java.util.*;
+import java.util.zip.GZIPInputStream;
 
 import static nearsoft.academy.bigdata.recommendation.Utilities.decompressGzipFile;
 
@@ -63,11 +64,9 @@ public class MovieRecommender {
 
 
     public void setupRecommender(String path) throws IOException, TasteException {
-        String fileTextName = "movies.txt";
-        File fileText = new File(fileTextName);
-        if(!fileText.exists()) {
-            decompressGzipFile(path, fileTextName);
-        }
+        FileInputStream fin = new FileInputStream(path);
+        GZIPInputStream gzis = new GZIPInputStream(fin);
+        InputStreamReader xover = new InputStreamReader(gzis);
 
         Integer usersCounter = 0;
         Integer itemsCounter = 0;
@@ -75,17 +74,14 @@ public class MovieRecommender {
         String outputFile = "movies.csv";
 
         try{
-            // Open the file
-            LineIterator it = FileUtils.lineIterator(fileText, "UTF-8");
-
+            BufferedReader is = new BufferedReader(xover);
+            String line;
             int[] entries = new int[2];
-
             FileWriter csvOutput = new FileWriter(outputFile);
 
             try{
                 //Read File Line By Line
-                while (it.hasNext()) {
-                    String line = it.nextLine();
+                while ((line = is.readLine()) != null) {
                     if(line.contains("product/productId: ")){
                         String item = line.substring(19);
                         if (!itemsMap.containsKey(item)) {
@@ -116,7 +112,7 @@ public class MovieRecommender {
             }
             finally{
                 //Close the input stream
-                LineIterator.closeQuietly(it);
+                is.close();
                 csvOutput.close();
             }
         }
